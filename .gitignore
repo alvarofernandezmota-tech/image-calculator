@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+venv/
+.venv/
+dist/
+build/
+*.spec
+
+# Imágenes de prueba locales
+*.jpg
+*.jpeg
+*.png
+*.webp
+!docs/
