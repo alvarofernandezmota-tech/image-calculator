@@ -5,14 +5,13 @@
 [![Python](https://img.shields.io/badge/Python-3.8+-blue?logo=python)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![OCR](https://img.shields.io/badge/OCR-Tesseract-orange)](https://github.com/tesseract-ocr/tesseract)
+[![Version](https://img.shields.io/badge/version-0.2.0-informational)](CHANGELOG.md)
 
 ---
 
 ## ¿Qué hace?
 
 Carga dos imágenes que contienen números, los lee automáticamente con OCR y aplica la operación que elijas: suma, resta, multiplicación, división, comparación, concatenación, máximo, mínimo o promedio.
-
-## Demo
 
 ```
 Imagen A: [foto con el número 42]
@@ -48,14 +47,8 @@ pip install -r requirements.txt
 
 ### 4. Ejecuta
 
-**Con interfaz gráfica:**
 ```bash
 python main.py
-```
-
-**Versión terminal:**
-```bash
-python terminal.py imagen1.png imagen2.png
 ```
 
 ---
@@ -65,15 +58,18 @@ python terminal.py imagen1.png imagen2.png
 ```
 image-calculator/
 ├── main.py              ← Punto de entrada (lanza GUI)
-├── terminal.py          ← Versión de consola para pruebas
-├── requirements.txt
+├── requirements.txt     ← Dependencias Python
 ├── LICENSE
+├── CHANGELOG.md         ← Historial de cambios
+├── ROADMAP.md           ← Trayectoria del proyecto
 ├── nucleo/
 │   ├── lector.py        ← Carga imagen + preprocesado + OCR
 │   └── operaciones.py   ← Lógica de operaciones
 └── gui/
     └── app.py           ← Interfaz gráfica tkinter
 ```
+
+---
 
 ## 📋 Operaciones disponibles
 
@@ -108,13 +104,16 @@ pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tessera
 
 ## 🗺️ Roadmap
 
-- [x] Núcleo OCR con preprocesado adaptativo
-- [x] GUI de escritorio (tkinter)
-- [x] Versión terminal
-- [ ] Bot de Telegram
-- [ ] Soporte para múltiples números por imagen
-- [ ] Exportar historial de operaciones
-- [ ] Modo oscuro / claro seleccionable
+Ver el [ROADMAP completo](ROADMAP.md).
+
+| Versión | Estado | Qué incluye |
+|---------|--------|-------------|
+| v0.1 | ✅ | Núcleo OCR + terminal |
+| v0.2 | ✅ | GUI de escritorio |
+| v0.3 | 🔜 | Tests + imágenes demo |
+| v0.4 | 🔜 | Binario `.exe` / `.app` |
+| v0.5 | 🔮 | Bot de Telegram |
+| v1.0 | 🔮 | Versión estable completa |
 
 ---
 
