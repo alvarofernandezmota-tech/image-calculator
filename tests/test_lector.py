@@ -57,22 +57,31 @@ class TestExtraerNumero:
         lector = LectorImagen()
         array_mock = np.ones((100, 100, 3), dtype=np.uint8)
         gris_mock = np.ones((100, 100), dtype=np.uint8)
-
         with patch.object(lector, "cargar", return_value=array_mock):
             with patch.object(lector, "preprocesar", return_value=gris_mock):
                 with patch("nucleo.lector.pytesseract.image_to_string", return_value="42"):
                     resultado = lector.extraer_numero("cualquier.png")
         assert resultado == 42.0
 
-    def test_extrae_numero_decimal(self):
-        """Si OCR devuelve '3.14', extraer_numero retorna 3.14."""
+    def test_extrae_numero_decimal_punto(self):
+        """Si OCR devuelve '3.14' (formato anglosajón), retorna 3.14."""
         lector = LectorImagen()
         array_mock = np.ones((100, 100, 3), dtype=np.uint8)
         gris_mock = np.ones((100, 100), dtype=np.uint8)
-
         with patch.object(lector, "cargar", return_value=array_mock):
             with patch.object(lector, "preprocesar", return_value=gris_mock):
                 with patch("nucleo.lector.pytesseract.image_to_string", return_value="3.14"):
+                    resultado = lector.extraer_numero("cualquier.png")
+        assert resultado == pytest.approx(3.14)
+
+    def test_extrae_numero_decimal_coma_europea(self):
+        """Si OCR devuelve '3,14' (formato europeo), retorna 3.14."""
+        lector = LectorImagen()
+        array_mock = np.ones((100, 100, 3), dtype=np.uint8)
+        gris_mock = np.ones((100, 100), dtype=np.uint8)
+        with patch.object(lector, "cargar", return_value=array_mock):
+            with patch.object(lector, "preprocesar", return_value=gris_mock):
+                with patch("nucleo.lector.pytesseract.image_to_string", return_value="3,14"):
                     resultado = lector.extraer_numero("cualquier.png")
         assert resultado == pytest.approx(3.14)
 
@@ -81,7 +90,6 @@ class TestExtraerNumero:
         lector = LectorImagen()
         array_mock = np.ones((100, 100, 3), dtype=np.uint8)
         gris_mock = np.ones((100, 100), dtype=np.uint8)
-
         with patch.object(lector, "cargar", return_value=array_mock):
             with patch.object(lector, "preprocesar", return_value=gris_mock):
                 with patch("nucleo.lector.pytesseract.image_to_string", return_value="abc xyz"):
@@ -93,9 +101,46 @@ class TestExtraerNumero:
         lector = LectorImagen()
         array_mock = np.ones((100, 100, 3), dtype=np.uint8)
         gris_mock = np.ones((100, 100), dtype=np.uint8)
-
         with patch.object(lector, "cargar", return_value=array_mock):
             with patch.object(lector, "preprocesar", return_value=gris_mock):
                 with patch("nucleo.lector.pytesseract.image_to_string", return_value=""):
                     with pytest.raises(ValueError):
                         lector.extraer_numero("blanco.png")
+
+
+class TestNormalizarNumero:
+    """
+    Tests unitarios de _normalizar_numero().
+    Cubre los cuatro formatos numéricos principales.
+    """
+
+    def setup_method(self):
+        self.lector = LectorImagen()
+
+    def test_entero_simple(self):
+        """'42' → 42.0"""
+        assert self.lector._normalizar_numero("42") == 42.0
+
+    def test_decimal_punto_anglosajón(self):
+        """'3.14' (anglosajón) → 3.14"""
+        assert self.lector._normalizar_numero("3.14") == pytest.approx(3.14)
+
+    def test_decimal_coma_europeo(self):
+        """'3,14' (europeo) → 3.14"""
+        assert self.lector._normalizar_numero("3,14") == pytest.approx(3.14)
+
+    def test_miles_anglosajón(self):
+        """'1,234.56' (miles anglosajón) → 1234.56"""
+        assert self.lector._normalizar_numero("1,234.56") == pytest.approx(1234.56)
+
+    def test_miles_europeo(self):
+        """'1.234,56' (miles europeo) → 1234.56"""
+        assert self.lector._normalizar_numero("1.234,56") == pytest.approx(1234.56)
+
+    def test_miles_sin_decimal_europeo(self):
+        """'1.234' (miles europeo sin decimales) → 1234.0"""
+        assert self.lector._normalizar_numero("1.234") == pytest.approx(1234.0)
+
+    def test_miles_sin_decimal_anglosajón(self):
+        """'1,234' (miles anglosajón sin decimales) → 1234.0"""
+        assert self.lector._normalizar_numero("1,234") == pytest.approx(1234.0)
