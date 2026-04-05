@@ -7,6 +7,9 @@ import numpy as np
 # Formatos de imagen aceptados por cargar()
 FORMATOS_SOPORTADOS = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff")
 
+# Tamaño mínimo de ancho para que Tesseract trabaje bien
+MIN_ANCHO_OCR = 600
+
 
 class LectorImagen:
     """
@@ -49,8 +52,11 @@ class LectorImagen:
 
         Pasos:
             1. Convierte a escala de grises.
-            2. Escala a mínimo 300px de ancho si es muy pequeña.
-            3. Aplica umbral adaptativo gaussiano (binarización local).
+            2. Escala agresivamente a mínimo 600px de ancho.
+            3. Aplica denoising para eliminar ruido de fondo.
+            4. Detecta y corrige inversión (texto claro sobre fondo oscuro).
+            5. Aplica umbral de Otsu para binarización óptima global.
+            6. Fallback a umbral adaptativo si Otsu falla.
 
         Args:
             imagen_array: numpy.ndarray RGB devuelto por cargar().
@@ -61,20 +67,33 @@ class LectorImagen:
         gris = cv2.cvtColor(imagen_array, cv2.COLOR_RGB2GRAY)
         h, w = gris.shape
 
-        # Escalar si la imagen es demasiado pequeña (mejora OCR notablemente)
-        if w < 300:
-            escala = 300 / w
+        # Escalado agresivo: mínimo 600px de ancho para mayor precisión OCR
+        if w < MIN_ANCHO_OCR:
+            escala = MIN_ANCHO_OCR / w
             gris = cv2.resize(
                 gris, None, fx=escala, fy=escala,
                 interpolation=cv2.INTER_CUBIC
             )
 
-        # Umbral adaptativo: maneja variaciones de iluminación
-        procesada = cv2.adaptiveThreshold(
-            gris, 255,
-            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            cv2.THRESH_BINARY, 11, 2
+        # Denoising: elimina ruido manteniendo bordes de los caracteres
+        gris = cv2.fastNlMeansDenoising(gris, h=10, templateWindowSize=7, searchWindowSize=21)
+
+        # Inversión automática: si el fondo es oscuro, invertir para Tesseract
+        # Tesseract espera texto oscuro sobre fondo claro
+        media_pixel = np.mean(gris)
+        if media_pixel < 127:
+            gris = cv2.bitwise_not(gris)
+
+        # Umbral de Otsu: calcula automáticamente el umbral óptimo global
+        _, procesada = cv2.threshold(
+            gris, 0, 255,
+            cv2.THRESH_BINARY + cv2.THRESH_OTSU
         )
+
+        # Morfología: pequeña dilatación para unir trazos fragmentados
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+        procesada = cv2.morphologyEx(procesada, cv2.MORPH_CLOSE, kernel)
+
         return procesada
 
     def _normalizar_numero(self, texto: str) -> float:
@@ -120,8 +139,9 @@ class LectorImagen:
         """
         Pipeline completo: carga → preprocesa → OCR → normaliza → devuelve float.
 
-        Detecta automáticamente el formato numérico (europeo o anglosajón)
-        y lo convierte a float correctamente.
+        Prueba múltiples configuraciones de Tesseract (PSM 7, 8, 6) y devuelve
+        el primer candidato válido encontrado. Mejora la robustez ante distintos
+        tipos de fuentes e imágenes.
 
         Args:
             ruta: Ruta al archivo de imagen.
@@ -140,21 +160,30 @@ class LectorImagen:
         imagen = self.cargar(ruta)
         procesada = self.preprocesar(imagen)
 
-        # PSM 6: asume bloque de texto uniforme (ideal para números aislados)
         # Whitelist: solo dígitos y separadores decimales/miles
-        config = "--psm 6 -c tessedit_char_whitelist=0123456789.,-"
-        texto = pytesseract.image_to_string(procesada, config=config)
+        whitelist = "-c tessedit_char_whitelist=0123456789.,-"
 
-        # Busca patrones numéricos incluyendo separadores de miles y decimales
-        candidatos = re.findall(
-            r'\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?|\d+[.,]\d+|\d+',
-            texto
+        # Probar múltiples modos PSM para mayor robustez:
+        # PSM 7: trata la imagen como una sola línea de texto (ideal para números)
+        # PSM 8: trata la imagen como una sola palabra
+        # PSM 6: bloque de texto uniforme (fallback)
+        configs = [
+            f"--psm 7 {whitelist}",
+            f"--psm 8 {whitelist}",
+            f"--psm 6 {whitelist}",
+        ]
+
+        patron = re.compile(
+            r'\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?|\d+[.,]\d+|\d+'
         )
 
-        if not candidatos:
-            raise ValueError(
-                "No se encontró ningún número en la imagen. "
-                "Asegúrate de que la imagen contiene un número visible y enfocado."
-            )
+        for config in configs:
+            texto = pytesseract.image_to_string(procesada, config=config)
+            candidatos = patron.findall(texto)
+            if candidatos:
+                return self._normalizar_numero(candidatos[0])
 
-        return self._normalizar_numero(candidatos[0])
+        raise ValueError(
+            "No se encontró ningún número en la imagen. "
+            "Asegúrate de que la imagen contiene un número visible y enfocado."
+        )
