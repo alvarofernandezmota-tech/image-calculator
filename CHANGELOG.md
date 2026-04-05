@@ -5,6 +5,19 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 
 ---
 
+## [v0.5] - 2026-04-05
+
+### Added
+- Instalador Windows con **Inno Setup 6** (`installer/ImageCalculator.iss`)
+- El instalador incluye Tesseract OCR integrado — no requiere instalación manual
+- Tesseract se añade automáticamente al PATH del sistema vía registro de Windows
+- Acceso directo en el escritorio y en el Menú Inicio
+- Release oficial en GitHub con `ImageCalculator-Setup.exe` descargable
+- README actualizado con sección de instalación rápida para usuarios finales
+- `.gitignore` actualizado para excluir binarios (`dist/`, `build/`, `installer/output/`)
+
+---
+
 ## [v0.4] - 2026-04-05
 
 ### Added
