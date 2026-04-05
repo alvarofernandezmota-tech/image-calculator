@@ -5,7 +5,7 @@
 [![Python](https://img.shields.io/badge/Python-3.8+-blue?logo=python)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![OCR](https://img.shields.io/badge/OCR-Tesseract-orange)](https://github.com/tesseract-ocr/tesseract)
-[![Version](https://img.shields.io/badge/version-0.3.0-informational)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.5.0-informational)](CHANGELOG.md)
 [![Tests](https://img.shields.io/badge/tests-31%20passed-brightgreen)](#-tests)
 
 ---
@@ -25,7 +25,22 @@ Imagen B: [foto con el número 18]
 
 ## 🚀 Instalación
 
-### 1. Instala Tesseract (motor OCR)
+### ⬇️ Instalador para Windows (recomendado)
+
+La forma más fácil. El instalador incluye todo — la aplicación y Tesseract OCR — sin configuración manual.
+
+1. Ve a la sección [**Releases**](https://github.com/alvarofernandezmota-tech/image-calculator/releases/latest)
+2. Descarga `ImageCalculator-Setup.exe`
+3. Ejecuta el instalador y sigue los pasos
+4. ¡Listo! La app aparecerá en el menú Inicio y en el escritorio
+
+> **Nota:** El instalador requiere permisos de administrador para instalar Tesseract OCR correctamente.
+
+---
+
+### 🛠️ Instalación manual (desarrolladores)
+
+#### 1. Instala Tesseract (motor OCR)
 
 | Sistema | Instrucción |
 |---------|-------------|
@@ -33,20 +48,20 @@ Imagen B: [foto con el número 18]
 | macOS   | `brew install tesseract` |
 | Linux   | `sudo apt install tesseract-ocr` |
 
-### 2. Clona el repositorio
+#### 2. Clona el repositorio
 
 ```bash
 git clone https://github.com/alvarofernandezmota-tech/image-calculator.git
 cd image-calculator
 ```
 
-### 3. Instala dependencias Python
+#### 3. Instala dependencias Python
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Ejecuta
+#### 4. Ejecuta
 
 ```bash
 python main.py
@@ -85,6 +100,9 @@ image-calculator/
 ├── LICENSE
 ├── CHANGELOG.md         ← Historial de cambios
 ├── ROADMAP.md           ← Trayectoria del proyecto
+├── installer/
+│   ├── ImageCalculator.iss  ← Script Inno Setup
+│   └── output/          ← Instalador generado (no versionado)
 ├── nucleo/
 │   ├── lector.py        ← Carga imagen + preprocesado + OCR
 │   └── operaciones.py   ← Lógica de las 9 operaciones
@@ -120,12 +138,14 @@ image-calculator/
 
 ## ⚠️ Nota Windows — Tesseract
 
-Si Tesseract no se detecta automáticamente, añade esto al principio de `nucleo/lector.py`:
+Si usas la instalación manual y Tesseract no se detecta automáticamente, añade esto al principio de `nucleo/lector.py`:
 
 ```python
 import pytesseract
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 ```
+
+> Si usas el instalador de Windows esto no es necesario — se configura automáticamente.
 
 ---
 
@@ -138,8 +158,8 @@ Ver el [ROADMAP completo](ROADMAP.md).
 | v0.1 | ✅ | Núcleo OCR + terminal |
 | v0.2 | ✅ | GUI de escritorio |
 | v0.3 | ✅ | Suite de 31 tests con pytest |
-| v0.4 | 🔜 | Binario `.exe` / `.app` con PyInstaller |
-| v0.5 | 🔮 | Bot de Telegram |
+| v0.4 | ✅ | Binario `.exe` con PyInstaller |
+| v0.5 | ✅ | Instalador Windows con Inno Setup |
 | v1.0 | 🔮 | Versión estable completa |
 
 ---
