@@ -1,6 +1,7 @@
 import cv2
 import pytesseract
 import re
+import os
 from PIL import Image
 import numpy as np
 
@@ -9,6 +10,26 @@ FORMATOS_SOPORTADOS = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff")
 
 # Tamaño mínimo de ancho para que Tesseract trabaje bien
 MIN_ANCHO_OCR = 600
+
+# Rutas candidatas de Tesseract en Windows (se prueba en orden)
+_RUTAS_TESSERACT_WINDOWS = [
+    r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+    r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+    os.path.expanduser(r"~\AppData\Local\Tesseract-OCR\tesseract.exe"),
+]
+
+def _configurar_tesseract():
+    """
+    Detecta la ruta de Tesseract en Windows y la configura en pytesseract.
+    Si no se encuentra en ninguna ruta conocida, asume que está en el PATH.
+    """
+    for ruta in _RUTAS_TESSERACT_WINDOWS:
+        if os.path.isfile(ruta):
+            pytesseract.pytesseract.tesseract_cmd = ruta
+            return
+    # Si no se encuentra, pytesseract usará el PATH del sistema
+
+_configurar_tesseract()
 
 
 class LectorImagen:
@@ -56,7 +77,7 @@ class LectorImagen:
             3. Aplica denoising para eliminar ruido de fondo.
             4. Detecta y corrige inversión (texto claro sobre fondo oscuro).
             5. Aplica umbral de Otsu para binarización óptima global.
-            6. Fallback a umbral adaptativo si Otsu falla.
+            6. Morfología: cierre para unir trazos fragmentados.
 
         Args:
             imagen_array: numpy.ndarray RGB devuelto por cargar().
@@ -79,7 +100,6 @@ class LectorImagen:
         gris = cv2.fastNlMeansDenoising(gris, h=10, templateWindowSize=7, searchWindowSize=21)
 
         # Inversión automática: si el fondo es oscuro, invertir para Tesseract
-        # Tesseract espera texto oscuro sobre fondo claro
         media_pixel = np.mean(gris)
         if media_pixel < 127:
             gris = cv2.bitwise_not(gris)
@@ -116,22 +136,12 @@ class LectorImagen:
         """
         t = texto.strip()
 
-        # Formato europeo: punto como miles, coma como decimal
-        # Ejemplo: "1.234,56" → "1234.56"
         if re.match(r'^\d{1,3}(\.\d{3})+(,\d+)?$', t):
             t = t.replace('.', '').replace(',', '.')
-
-        # Formato anglosajón: coma como miles, punto como decimal
-        # Ejemplo: "1,234.56" → "1234.56"
         elif re.match(r'^\d{1,3}(,\d{3})+(\.\d+)?$', t):
             t = t.replace(',', '')
-
-        # Decimal simple con coma europea: "3,14" → "3.14"
         elif re.match(r'^\d+,\d+$', t):
             t = t.replace(',', '.')
-
-        # Decimal simple con punto o entero: "3.14" / "42" → sin cambios
-        # else: t queda igual
 
         return float(t)
 
@@ -140,8 +150,7 @@ class LectorImagen:
         Pipeline completo: carga → preprocesa → OCR → normaliza → devuelve float.
 
         Prueba múltiples configuraciones de Tesseract (PSM 7, 8, 6) y devuelve
-        el primer candidato válido encontrado. Mejora la robustez ante distintos
-        tipos de fuentes e imágenes.
+        el primer candidato válido encontrado.
 
         Args:
             ruta: Ruta al archivo de imagen.
@@ -151,22 +160,11 @@ class LectorImagen:
 
         Raises:
             ValueError: Si no se encuentra ningún número en la imagen.
-
-        Ejemplos:
-            >>> lector.extraer_numero("foto_42.png")       # → 42.0
-            >>> lector.extraer_numero("precio_3_14.png")   # → 3.14
-            >>> lector.extraer_numero("miles_1234.png")    # → 1234.56
         """
         imagen = self.cargar(ruta)
         procesada = self.preprocesar(imagen)
 
-        # Whitelist: solo dígitos y separadores decimales/miles
         whitelist = "-c tessedit_char_whitelist=0123456789.,-"
-
-        # Probar múltiples modos PSM para mayor robustez:
-        # PSM 7: trata la imagen como una sola línea de texto (ideal para números)
-        # PSM 8: trata la imagen como una sola palabra
-        # PSM 6: bloque de texto uniforme (fallback)
         configs = [
             f"--psm 7 {whitelist}",
             f"--psm 8 {whitelist}",
