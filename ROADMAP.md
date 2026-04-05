@@ -32,13 +32,15 @@ Esta es la trayectoria del proyecto. Las versiones son orientativas.
 - [x] Docstrings completos en todos los métodos del núcleo
 - [x] Comentarios en español en todo el código
 
----
+## ✅ v0.5 — Distribución Windows (completado — 2026-04-05)
+- [x] Empaquetado como `.exe` con PyInstaller
+- [x] Instalador Windows con Inno Setup 6 (`installer/ImageCalculator.iss`)
+- [x] Tesseract OCR integrado en el instalador — sin configuración manual
+- [x] Tesseract añadido automáticamente al PATH del sistema
+- [x] Release oficial en GitHub con `ImageCalculator-Setup.exe` descargable
+- [x] README actualizado con instrucciones para usuarios finales
 
-## 🔜 v0.5 — Distribución
-- [ ] Empaquetar como `.exe` (Windows) con PyInstaller
-- [ ] Empaquetar como `.app` (macOS) con PyInstaller
-- [ ] Release oficial en GitHub con binario descargable
-- [ ] Instrucciones de instalación sin Python en README
+---
 
 ## 🔮 v0.6 — Bot de Telegram
 - [ ] Integración con `python-telegram-bot`
