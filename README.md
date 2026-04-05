@@ -23,6 +23,111 @@ Imagen B: [foto con el número 18]
 
 ---
 
+## 🔮 Visión v1.0 — Lector de documentos con tabla editable
+
+La evolución natural del proyecto es leer **documentos completos** (tickets, facturas, restaurantes) y extraer todos los conceptos y precios para operar con ellos. El usuario puede **corregir los datos antes de calcular**, evitando errores del OCR.
+
+```
+[foto ticket supermercado]
+       ↓  OCR
+  texto crudo
+       ↓  Parser + Plantilla
+  datos limpios
+       ↓  Tabla editable
+  usuario revisa y corrige
+       ↓  Calcular
+     TOTAL
+```
+
+---
+
+## 🧠 Arquitectura del parser y las plantillas
+
+### ¿Por qué plantillas?
+
+Detectar automáticamente el tipo de documento es difícil y propenso a errores. La solución más robusta y mantenible es que el **usuario seleccione el modo** (Supermercado, Restaurante, Factura…) y el programa cargue la plantilla correspondiente. Así el parser sabe exactamente qué patrones buscar y qué ignorar.
+
+### Qué hace el parser
+
+El parser convierte el texto crudo del OCR en datos limpios estructurados:
+
+| Entrada (texto OCR) | Salida (datos limpios) |
+|---|---|
+| `"Leche entera 1L       1,25"` | `{"concepto": "Leche entera 1L", "precio": 1.25}` |
+| `"Pan molde grande      0,89"` | `{"concepto": "Pan molde grande", "precio": 0.89}` |
+| `"TOTAL                 3,82"` | *(ignorado)* |
+
+**Pasos internos del parser:**
+1. **Filtra líneas basura** — elimina TOTAL, IVA, nombre tienda, dirección, teléfono, NIF, fechas
+2. **Detecta el patrón precio** — busca líneas que terminen con un número decimal
+3. **Limpia el concepto** — elimina espacios extra y caracteres raros del OCR
+4. **Normaliza el precio** — convierte `1,25` → `1.25` (float operable)
+
+### Estructura de plantillas
+
+Cada modo tiene sus propias reglas:
+
+```python
+PLANTILLAS = {
+    "supermercado": {
+        "patron_precio": r'^(.+?)\s{2,}(\d+[,\.]\d{2})\s*$',
+        "ignorar": ["total", "iva", "subtotal", "fecha", "nif", "tel", "cif"]
+    },
+    "restaurante": {
+        "patron_precio": r'^(\d+)[xX]\s*(.+?)\s+(\d+[,\.]\d{2})\s*$',
+        "ignorar": ["total", "iva", "cubierto", "servicio"]
+    },
+    "factura": {
+        "patron_precio": r'(.+?)\s+(\d+)\s+(\d+[,\.]\d{2})\s+(\d+[,\.]\d{2})\s*$',
+        "ignorar": ["subtotal", "iva", "base imponible", "total"]
+    }
+}
+```
+
+Las plantillas son **ampliables**: si un supermercado tiene un formato raro, se añade una plantilla nueva sin tocar el resto del código.
+
+---
+
+## 🔄 Flujo completo del programa (v1.0)
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  1. USUARIO carga imagen (ticket / factura / restaurante)│
+│  2. Elige MODO: Supermercado | Restaurante | Factura     │
+└──────────────────────┬──────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────┐
+│  3. OCR — Tesseract                                      │
+│     imagen.png  →  texto crudo                           │
+│     "Leche entera 1L       1,25\nPan molde     0,89\n…" │
+└──────────────────────┬──────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────┐
+│  4. PARSER + PLANTILLA  (nucleo/parser.py)               │
+│     Carga la plantilla del modo elegido                  │
+│     Filtra basura → detecta líneas de producto           │
+│     Extrae concepto + precio → lista de dicts            │
+│     [{"concepto": "Leche entera 1L", "precio": 1.25}, …]│
+└──────────────────────┬──────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────┐
+│  5. TABLA EDITABLE  (gui/app.py)                         │
+│     Muestra los datos limpios fila por fila              │
+│     Usuario puede editar concepto y precio               │
+│     Usuario puede añadir o eliminar filas                │
+│     Pulsa "Calcular" → suma todos los precios → TOTAL    │
+└─────────────────────────────────────────────────────────┘
+```
+
+### ¿Por qué tabla editable?
+
+El OCR no es perfecto. Puede leer `L3che` en vez de `Leche`, o saltarse una línea. La tabla editable da al usuario el **control final** sobre los datos antes de calcular, haciendo el resultado siempre fiable independientemente de la calidad de la imagen.
+
+---
+
 ## 🚀 Instalación
 
 ### ⬇️ Instalador para Windows (recomendado)
@@ -105,9 +210,10 @@ image-calculator/
 │   └── output/          ← Instalador generado (no versionado)
 ├── nucleo/
 │   ├── lector.py        ← Carga imagen + preprocesado + OCR
-│   └── operaciones.py   ← Lógica de las 9 operaciones
+│   ├── operaciones.py   ← Lógica de las 9 operaciones
+│   └── parser.py        ← [v1.0] Parser + sistema de plantillas
 ├── gui/
-│   └── app.py           ← Interfaz gráfica tkinter
+│   └── app.py           ← Interfaz gráfica tkinter (+ tabla editable en v1.0)
 └── tests/
     ├── conftest.py      ← Fixtures compartidas
     ├── test_lector.py   ← Tests del módulo OCR
@@ -160,7 +266,7 @@ Ver el [ROADMAP completo](ROADMAP.md).
 | v0.3 | ✅ | Suite de 31 tests con pytest |
 | v0.4 | ✅ | Binario `.exe` con PyInstaller |
 | v0.5 | ✅ | Instalador Windows con Inno Setup |
-| v1.0 | 🔮 | Versión estable completa |
+| v1.0 | 🔮 | Parser + plantillas + tabla editable |
 
 ---
 
@@ -177,6 +283,7 @@ Ver el [ROADMAP completo](ROADMAP.md).
 
 ### Ideas para contribuir
 
+- Nuevas plantillas para tipos de documento
 - Soporte para más idiomas en el OCR
 - Nuevas operaciones matemáticas
 - Mejoras en el preprocesado de imagen
