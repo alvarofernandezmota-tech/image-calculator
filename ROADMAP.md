@@ -42,18 +42,96 @@ Esta es la trayectoria del proyecto. Las versiones son orientativas.
 
 ---
 
-## 🔮 v0.6 — Bot de Telegram
+## 🔶 v1.0 — Lector de documentos con IA (en desarrollo)
+
+> **Objetivo:** leer tickets, facturas y recibos completos, extraer todos los conceptos y precios, y presentarlos en una tabla editable antes de calcular el total.
+
+### Arquitectura v1.0
+
+```
+imagen → OCR (Tesseract) → texto crudo
+                               ↓
+                    Parser IA (Groq API)
+                               ↓
+                    datos limpios (JSON)
+                    [{"concepto": "Leche", "precio": 1.25}, …]
+                               ↓
+                    Tabla editable (GUI tkinter)
+                    usuario corrige si hay errores OCR
+                               ↓
+                           TOTAL
+```
+
+### Módulos nuevos
+
+```
+nucleo/
+└── parser.py        ← Parser IA con Groq + fallback heurístico
+gui/
+└── app.py           ← GUI actualizada con tabla editable y selector de modo
+```
+
+### Tareas
+- [ ] `nucleo/parser.py` — cliente Groq que recibe texto OCR y devuelve JSON limpio
+- [ ] Sistema de plantillas por modo (Supermercado / Restaurante / Factura)
+- [ ] Fallback heurístico si Groq no está disponible (sin internet)
+- [ ] GUI nueva: selector de modo + tabla editable (concepto + precio editables)
+- [ ] Botones: añadir fila, eliminar fila, calcular total
+- [ ] Tests del parser con textos OCR de ejemplo
+- [ ] Actualizar `requirements.txt` con `groq` o `httpx`
+- [ ] Documentación de integración con THdora
+
+### Variables de entorno necesarias
+
+```env
+GROQ_API_KEY=tu_api_key_aqui     # Gratuita en console.groq.com
+GROQ_MODEL=llama3-8b-8192        # opcional, por defecto
+```
+
+---
+
+## 🔮 Integración con THdora (ecosistema THEA IA)
+
+> **Objetivo:** el módulo `nucleo/parser.py` se integra en [THdora](https://github.com/alvarofernandezmota-tech/thdora) como `src/ai/ticket_parser.py`
+
+El usuario manda una foto de un ticket por Telegram → THDORA usa el parser para extraer los gastos → los registra automáticamente.
+
+Flujo completo dentro de THdora:
+
+```
+[usuario] foto ticket por Telegram
+       ↓
+[bot]  recibe la imagen
+       ↓
+[nucleo/lector.py]  OCR → texto crudo       ← viene de image-calculator
+       ↓
+[src/ai/ticket_parser.py]  Groq → JSON      ← viene de image-calculator
+       ↓
+[bot]  muestra tabla editable al usuario
+       ↓
+[usuario] confirma o edita
+       ↓
+[src/db]  guarda el gasto en SQLite
+```
+
+Estas son las fases del roadmap de THdora donde se integra:
+- **F12 — IA conversacional**: el parser de tickets es la primera habilidad visual del bot
+- **F10 — Tracking personal**: los gastos del ticket pueden alimentar el tracking diario
+
+---
+
+## 🔮 v1.1 — Bot de Telegram standalone
 - [ ] Integración con `python-telegram-bot`
-- [ ] El usuario manda dos fotos → el bot responde con el resultado
+- [ ] El usuario manda foto de ticket → el bot responde con tabla de gastos
 - [ ] Selección de operación por botones inline
 - [ ] Despliegue en Railway (plan gratuito)
 
-## 🔮 v1.0 — Versión estable
-- [ ] Soporte para múltiples números por imagen
-- [ ] Historial de operaciones exportable a CSV
+## 🔮 v2.0 — Versión completa
+- [ ] Historial de tickets exportable a CSV / Excel
+- [ ] Estadísticas de gasto por categoría
 - [ ] Modo oscuro / claro en la GUI
-- [ ] Documentación completa en español e inglés
 - [ ] GitHub Actions CI — tests automáticos en cada PR
+- [ ] Documentación completa en español e inglés
 
 ---
 
